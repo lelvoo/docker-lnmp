@@ -1,0 +1,93 @@
+version: '3.1'
+
+services:
+
+  nginx:
+    image: "${NGINX_VERSION}"
+    ports:
+      - 80:80
+      - 443:443/tcp
+    volumes:
+      - ./log/nginx:/var/log/nginx:rw
+      - ./etc/nginx/config:/etc/nginx/conf.d:rw
+      - ./etc/ssl:/etc/nginx/ssl:rw
+      - ./wwwroot:/var/www:rw
+    environment:
+      ENABLE_CRONTAB: "true"
+      TZ: ${TZ}
+    restart: always
+    networks:
+      - frontend
+      - backend
+
+  caddy:
+    image: "${CADDY_VERSION}"
+    entrypoint: /usr/bin/caddy
+    command: ["-conf", "/etc/caddy/Caddyfile", "-agree", "-quic"]
+    ports:
+      - 443:443/udp
+    volumes:
+      - ./etc/caddy/Caddyfile:/etc/caddy/Caddyfile:rw
+      - ./etc/ssl:/ssl:rw
+    environment:
+      TZ: ${TZ}
+    restart: always
+    networks:
+      - frontend
+      - backend
+
+  php-fpm:
+    image: "${PHP_VERSION}"
+    volumes:
+      - ./wwwroot:/var/www:rw
+      - ./etc/crontab:/etc/crontabs:rw
+    environment:
+      ENABLE_CRONTAB: "true"
+      TZ: ${TZ}
+    restart: always
+    networks:
+      - backend
+
+  mysql:
+    image: "${MYSQL_VERSION}"
+    command: --default-authentication-plugin=mysql_native_password
+    volumes:
+      - ./data/database/config:/etc/my.cnf.d:rw
+      - ./data/database/data:/var/lib/mysql:rw
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_ROOT_HOST: "%"
+      TZ: ${TZ}
+    restart: always
+    networks:
+      - backend
+
+  phpmyadmin:
+    image: "${PMA_VERSION}"
+    ports:
+      - 8080:80
+    depends_on:
+      - mysql
+    environment:
+      PMA_HOST: mysql
+      TZ: ${TZ}
+    networks:
+      - frontend
+      - backend
+
+  redis:
+    image: "${REDIS_VERSION}"
+    volumes:
+      - ./data/redis/data:/data:rw
+    environment:
+      TZ: ${TZ}
+    restart: always
+    networks:
+      - backend
+
+
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge
