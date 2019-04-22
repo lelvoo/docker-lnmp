@@ -39,7 +39,7 @@ services:
   php-fpm:
     image: "${PHP_VERSION}"
     volumes:
-      - ./wwwroot:/var/www:rw
+      - ./www:/var/www:rw
       - ./etc/crontab:/etc/crontabs:rw
     environment:
       ENABLE_CRONTAB: "true"
